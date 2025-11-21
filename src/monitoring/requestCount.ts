@@ -1,24 +1,24 @@
 import client from "prom-client";
 
-const activeUserGuage = new client.Gauge({
-      name : "request_count",
-      help : "Total request count",
-      labelNames : ["method", "route"]
+export const httpRequestDurationMicroseconds = new client.Histogram({
+    name: 'http_request_duration_ms',
+    help: 'Duration of HTTP requests in ms',
+    labelNames: ['method', 'route', 'code'],
+    buckets: [0.1, 5, 15, 50, 100, 300, 500, 1000, 3000, 5000] // Define your own buckets here
 });
 
 //@ts-ignore
 export function requestCount(req , res, next){
-
-    activeUserGuage.inc({
-           method: req.method,
-           route: req.path
-    });
-
+    const startTime = Date.now();
+    
      res.on("finish", ()=> {
-        activeUserGuage.dec({
-            method : req.method ,
-            route: req.path 
-        });
+        const endTime = Date.now();
+        httpRequestDurationMicroseconds.observe({
+            method: req.method,
+            route: req.path,
+            code: req.statusCode,
+        }, endTime - startTime)
+        
      });
 
     next();
